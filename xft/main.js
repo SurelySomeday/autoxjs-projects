@@ -40,27 +40,32 @@ function sendResult(img, msg) {
         subject: "打卡结果",
         text: msg
     });
-    var button = text("电子邮件").findOne()
+    var button = text("电子邮件").findOne(10*1000)
     if(button){
         toast("默认选择电子邮件");
         button.parent().click();
     }
 
     sleep(1000);
-    id("to").findOne().setText("648951430@qq.com");
-    id("do_attach").findOne().click();
-    var button = text("相册").findOne()
+    // 填写收件人
+    id("to").findOne(10*1000).setText("648951430@qq.com");
+    // 追加附件
+    id("do_attach").findOne(10*1000).click();
+    var button = text("相册").findOne(10*1000)
     if(button){
         button.parent().click();
     }
-    id("grid").findOne().children().forEach(child => {
+    sleep(1000);
+    id("grid").findOne(10*1000).children().forEach(child => {
         var target = child.findOne(id("pick_num_indicator"));
         if(target != null){
             target.parent().click();
         }
     });
+    // 点击发送
     sleep(1000);
     id("compose_send_btn").findOne().click();
+    home();
 
 }
 try{
@@ -68,65 +73,50 @@ try{
     log("打开xft");
     openApp("com.cmbchina.xft")
     sleep(1000);
-    log("连续点击两次返回，确保在主页");
-    // 连续点击两次返回，确保在主页
-    sleep(3000);
-    click(28, 128);
-    sleep(1000);
-    click(28, 128);
+    log("确保在主页");
+    // 确保在主页
+    while(id("bar_id_left_view").exists()){
+        id("bar_id_left_view").click();
+    }
 
     // -- 这时候xft是已经打开的
     // -- 下一步确认打卡按钮已经加载完毕
     //循环找色，找到蓝色(#3285ff)时停止并报告坐标
     log("获取截图权限，准备截图");
     getScreenCapture();
-    requestScreenCapture();
-    while(true){
-        var img = captureScreen();
-        var point = findColor(img, "#3285ff", {
-            region: [202, 952, 1,1],
-            threshold: 4
-            });
-        if(point){
-            toast("找到打卡模块按钮，坐标为(" + point.x + ", " + point.y + ")");
-            break;
-        }
-    }
+    // 找打卡按钮
+    className("android.view.View").text("打卡").findOne(10*1000).click();
 
-
-    // -- 这时候打卡按钮已经出现
-
-    //点击打卡
-    click(200, 1000);
-    sleep(5000)
-    //循环找色，找到蓝色(#3e76ff)时停止并报告坐标
-    while(true){
-        var img = captureScreen();
-        var point = findColor(img, "#3e76ff", {
-            region: [660, 1719, 200, 200],
-            threshold: 4
-            });
-        if(point){
-            toast("找到签到按钮，坐标为(" + point.x + ", " + point.y + ")");
-            break;
-        }
-    }
     log("点击签到按钮");
     //确认打卡
-    click(550, 1750)
-    sleep(3000)
-    //className("android.view.View").text("签退").findOne().click()
+    // 这里需要暂停等待定位
+    sleep(3000);
+    while(text("定位中").exists()){
+    }
+    while(text("不在考勤范围").exists()){
+        text("刷新").click();
+        sleep(5000);
+    }
+    className("android.view.View").text("签退").findOne(10*1000).click();
     //确认打卡弹窗
+    sleep(3000)
     log("点击打卡后的知道了");
-    click(558,1590)
+    var button = text("知道").findOne(10*1000);
+    if(button){
+        button.parent().click();
+    }else{
+        log("打卡失败");
+        throw new Error("打卡失败");
+    }
     sleep(3000)
     var img = captureScreen("/sdcard/res.png");
     sendResult(img, "打卡成功");
     sleep(1000)
-    // 结束打卡，返回上一级
-    log("结束打卡返回上一级");
-    click(51,150)
-    sleep(500)
+
+    // 返回到xft首页
+    while(id("bar_id_left_view").exists()){
+        id("bar_id_left_view").click();
+    }
     log("结束打卡返回home");
     home()
     log("脚本结束");
