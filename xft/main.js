@@ -40,7 +40,7 @@ function sendResult(img, msg) {
         subject: "打卡结果",
         text: msg
     });
-    var button = text("电子邮件").findOne(10*1000)
+    var button = text("电子邮件").findOne(5*1000)
     if(button){
         toast("默认选择电子邮件");
         button.parent().click();
@@ -48,15 +48,15 @@ function sendResult(img, msg) {
 
     sleep(1000);
     // 填写收件人
-    id("to").findOne(10*1000).setText("648951430@qq.com");
+    id("to").findOne(5*1000).setText("648951430@qq.com");
     // 追加附件
-    id("do_attach").findOne(10*1000).click();
-    var button = text("相册").findOne(10*1000)
+    id("do_attach").findOne(5*1000).click();
+    var button = text("相册").findOne(5*1000)
     if(button){
         button.parent().click();
     }
     sleep(1000);
-    id("grid").findOne(10*1000).children().forEach(child => {
+    id("grid").findOne(5*1000).children().forEach(child => {
         var target = child.findOne(id("pick_num_indicator"));
         if(target != null){
             target.parent().click();
@@ -75,8 +75,11 @@ try{
     sleep(1000);
     log("确保在主页");
     // 确保在主页
-    while(id("bar_id_left_view").exists()){
-        id("bar_id_left_view").click();
+    if(id("bar_id_left_view").exists()){
+        id("bar_id_left_view").findOne(2*1000).click();
+    }
+    if(id("bar_id_left_view").exists()){
+        id("bar_id_left_view").findOne(2*1000).click();
     }
 
     // -- 这时候xft是已经打开的
@@ -85,38 +88,60 @@ try{
     log("获取截图权限，准备截图");
     getScreenCapture();
     // 找打卡按钮
-    className("android.view.View").text("打卡").findOne(10*1000).click();
+
+    className("android.view.View").text("打卡").findOne(5*1000).click();
 
     log("点击签到按钮");
     //确认打卡
     // 这里需要暂停等待定位
-    sleep(3000);
+    sleep(8000);
     while(text("定位中").exists()){
     }
     while(text("不在考勤范围").exists()){
         text("刷新").click();
         sleep(5000);
     }
-    className("android.view.View").text("签退").findOne(10*1000).click();
+
+    // 获取签到\签退按钮
+    var checkButton = className("android.view.View").textMatches("签到|签退").findOne(5*1000);
+    sleep(5000);
+    if(checkButton){
+        checkButton.click();
+    }
+    sleep(5000);
     //确认打卡弹窗
-    sleep(3000)
     log("点击打卡后的知道了");
-    var button = text("知道").findOne(10*1000);
+    var button = text("知道了").findOne(5*1000);
     if(button){
-        button.parent().click();
+        button.click();
     }else{
         log("打卡失败");
         throw new Error("打卡失败");
     }
-    sleep(3000)
+    sleep(3000);
     var img = captureScreen("/sdcard/res.png");
-    sendResult(img, "打卡成功");
-    sleep(1000)
 
     // 返回到xft首页
-    while(id("bar_id_left_view").exists()){
-        id("bar_id_left_view").click();
+    var backBtn1 = id("bar_id_left_view").findOne(2*1000);
+    if(backBtn1){
+        backBtn1.click();
     }
+    var backBtn2 = id("bar_id_left_view").findOne(2*1000);
+    if(backBtn2){
+        backBtn2.click();
+    }
+    //顶部打卡提示去掉
+/*     var tipBtn = id("vp_act_tab_main_viewPager2").findOne(3*1000);
+    if(tipBtn && tipBtn.children()){
+        tipBtn.children().forEach(child => {
+        var target = child.findOne(id("iv_scan_icon"));
+        if(target != null){
+            target.click();
+        }
+        });
+    } */
+    sendResult(img, "打卡成功");
+    sleep(1000);
     log("结束打卡返回home");
     home()
     log("脚本结束");
