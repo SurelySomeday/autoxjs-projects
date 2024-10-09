@@ -1,43 +1,43 @@
 //app应用关闭
 function killApp(packageName) {
-    // 打开系统级应用设置
-    app.openAppSetting(packageName);
-    sleep(random(1000, 2000));
-    text(app.getAppName(packageName)).waitFor();
+  // 打开系统级应用设置
+  app.openAppSetting(packageName);
+  sleep(random(1000, 2000));
+  text(app.getAppName(packageName)).waitFor();
 
-    // 执行盲点流程 （多点几次不过分。都是非阻塞的。）
-    var times = 3; // 多点几次，应对页面上存在一些其他tips文字，干扰流程。
-    do {
-      stop();
-      times--;
-    } while (times);
+  // 执行盲点流程 （多点几次不过分。都是非阻塞的。）
+  var times = 3; // 多点几次，应对页面上存在一些其他tips文字，干扰流程。
+  do {
+    stop();
+    times--;
+  } while (times);
 
-    sleep(random(1000, 1500));
-    back();
+  sleep(random(1000, 1500));
+  back();
+}
+
+// 盲点
+function stop() {
+  var is_sure = text("结束运行").findOnce();
+  log(is_sure);
+  if (is_sure) {
+    is_sure.parent().click();
+    sleep(random(500, 1000));
   }
 
-  // 盲点
-  function stop() {
-    var is_sure = text("结束运行").findOnce();
-    log(is_sure);
-    if (is_sure) {
-      is_sure.parent().click();
-      sleep(random(500, 1000));
-    }
-
-    var b = textMatches(/(.*确.*|.*定.*)/).findOnce();
-    if (b) {
-      b.click();
-      sleep(random(500, 1000));
-    }
+  var b = textMatches(/(.*确.*|.*定.*)/).findOnce();
+  if (b) {
+    b.click();
+    sleep(random(500, 1000));
   }
+}
 //获取截屏权限
 function getScreenCapture() {
   let Thread = threads.start(function () {
     if (auto.service != null) {
       //如果已经获得无障碍权限
       //由于系统间同意授权的文本不同，采用正则表达式
-      let Allow = textMatches(/(允许|立即开始|统一)/).findOne(10 * 1000);
+      let Allow = textMatches(/(允许|立即开始|统一)/).findOne(3 * 1000);
       if (Allow) {
         Allow.click();
       }
@@ -64,11 +64,10 @@ function openApp(str) {
   //if (Allow) {
   //	Allow.click();
   //}
-}
+  }
 
 //邮件推送打卡结果
 function sendResult(img, msg) {
-  sleep(1000);
   app.sendEmail({
     email: ["648951430@qq.com"],
     subject: "打卡结果",
@@ -122,25 +121,24 @@ try {
   // 确保在主页
   if (id("bar_id_left_view").exists()) {
     id("bar_id_left_view")
-      .findOne(2 * 1000)
+      .findOne(5 * 1000)
       .click();
   }
   if (id("bar_id_left_view").exists()) {
     id("bar_id_left_view")
-      .findOne(2 * 1000)
+      .findOne(5 * 1000)
       .click();
   }
 
   // -- 这时候xft是已经打开的
   // -- 下一步确认打卡按钮已经加载完毕
-  //循环找色，找到蓝色(#3285ff)时停止并报告坐标
   log("获取截图权限，准备截图");
   getScreenCapture();
   // 找打卡按钮
 
   className("android.view.View")
     .text("打卡")
-    .findOne(5 * 1000)
+    .findOne(10 * 1000)
     .click();
 
   log("点击签到按钮");
@@ -156,10 +154,15 @@ try {
   // 获取签到\签退按钮
   var checkButton = className("android.view.View")
     .textMatches("签到|签退")
-    .findOne(5 * 1000);
+    .findOne(10 * 1000);
   sleep(5000);
   if (checkButton) {
     checkButton.click();
+  }
+  // 检查早退
+  var textZt = textContains("早退").findOne(3 * 1000)
+  if (textZt) {
+    throw new Error("打卡失败！早退！");
   }
   sleep(5000);
   //确认打卡弹窗
