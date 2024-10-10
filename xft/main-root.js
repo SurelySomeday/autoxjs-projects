@@ -1,8 +1,62 @@
+var checkInTime = [8*60+30,9*60+30];
+var checkOutTime = [17*60+30,18*60+30];
+//获取今天
+function getTodayStr(){
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = ('0' + (now.getMonth() + 1)).slice(-2);
+  const day = ('0' + now.getDate()).slice(-2);
+  const hours = ('0' + now.getHours()).slice(-2);
+  const minutes = ('0' + now.getMinutes()).slice(-2);
+  const seconds = ('0' + now.getSeconds()).slice(-2);
+
+  return year +'-'+ month +'-'+day;
+}
+
+function inCheckInTime(){
+  const now = new Date();
+  const hours=now.getHours();
+  const minutes=now.getMinutes();
+  return hours*60+30+minutes>=checkInTime[0] && hours*60+30+minutes<=checkInTime[1];
+}
+function inCheckOutTime(){
+  const now = new Date();
+  const hours=now.getHours();
+  const minutes=now.getMinutes();
+  return hours*60+30+minutes>=checkOutTime[0];
+}
+
+//判断工作日
+function isWorkDay(dateStr){
+  try{
+    var url = "http://timor.tech/api/holiday/info/";
+    var headers={};
+    headers['user-agent']='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0';
+    headers['accept']='text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7';
+    headers['ccept-language']='accept-language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6';
+    var res = http.get(url+dateStr,{headers:headers});
+    if(res.statusCode != 200){
+      log("请求失败: " + res.statusCode + " " + res.statusMessage);
+    }else{
+        var data = res.body.json();
+        log("请求返回数据: " + JSON.stringify(data));
+        if(data.code!=0){
+          log("请求失败: " + data);
+        }else{
+          return (data.type.type==0 ||data.type.type==3)
+        }
+    }
+  }catch(error){
+    log("请求失败: " + error);
+  }
+  return true;
+}
+
 //app应用关闭
 function killApp(packageName) {
   shell('am force-stop '+packageName,true);
 }
-
 
 //打开app
 function openApp(str) {
@@ -63,13 +117,9 @@ function sendResult(img, msg, type) {
   id("compose_send_btn").findOne().click();
   home();
 }
-try {
+
+function checkInOrOut(){
   log("脚本开始");
-  sleep(1000);
-  log("打开xft");
-  openApp("com.cmbchina.xft")
-  sleep(1000);
-  log("关闭xft");
   killApp("com.cmbchina.xft");
   log("打开xft");
   openApp("com.cmbchina.xft");
@@ -98,13 +148,34 @@ try {
   // 获取签到\签退按钮
   var checkButton = className("android.view.View")
     .textMatches("签到|签退")
+    .enabled(true)
     .findOne(30 * 1000);
+  // 存在签到签退按钮
   if (checkButton) {
-    var checkButton = textContains("已签退").findOne(1 * 1000);
-    if(!checkButton){
-      checkButton.click();
-    }else{
-      isCheck = true;
+    //签到
+    if(checkButton.text()=="签到"){
+      var checkStatusButton = textContains("已签到").findOne(1 * 1000);
+      //未签到
+      if(!checkStatusButton){
+        checkButton.click();
+        toast("已经打过卡了。");
+      }else{
+        isCheck = true;
+      }
+    }else if(checkButton.text()=="签退"){
+      var checkStatusButton = textContains("已签退").findOne(1 * 1000);
+      //未签退
+      if(!checkStatusButton){
+        //在签退时间内则签退，否则不签退
+        if(inCheckOutTime()){
+          checkButton.click();
+        }else{
+          isCheck = true;
+          toast("未在签退时间内。");
+        }
+      }else{
+        isCheck = true;
+      }
     }
   }else{
     throw new Error("打卡失败！无法获取签到按钮！");
@@ -133,9 +204,33 @@ try {
   log("结束打卡返回home");
   home();
   log("脚本结束");
-} catch (error) {
-  // 处理异常
-  log("An exception occurred: ", error);
-  var img = captureScreen("/sdcard/res.png");
-  sendResult(img, "打卡失败,异常原因：" + error,0);
+
+}
+
+//支持早退延迟打卡
+function check(i){
+  try{
+    checkInOrOut();
+  }catch (error) {
+    if(i<10 && error.toString().indexOf("早退")>0){//早退10次重试
+      sleep(60*1000);
+      check(i+1);
+    }else if(i<3){//默认可以重试三次
+      sleep(60*1000);
+      check(i+1);
+    }
+    else{
+      // 处理异常
+      log("An exception occurred: ", error);
+      var img = captureScreen("/sdcard/res.png");
+      sendResult(img, "打卡失败,异常原因：" + error,0);
+    }
+  }
+}
+
+if(isWorkDay(getTodayStr())){
+  var delay = random(1, 1);
+  toast("等待" + delay + "秒");
+  sleep(delay * 1000);
+  check(1);
 }
